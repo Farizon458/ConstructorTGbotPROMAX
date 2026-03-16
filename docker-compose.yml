@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: bot_constructor_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bot_constructor
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    container_name: bot_constructor_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres_password@db:5432/bot_constructor
+    volumes:
+      - ./logs:/app/logs
+      - ./bot_data:/app/bot_data
+    command: python main.py
+
+volumes:
+  postgres_data:
